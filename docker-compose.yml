@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: vibelive
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: vibelive
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
