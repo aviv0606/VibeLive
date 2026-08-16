@@ -1,0 +1,1259 @@
+<title>VibeLive &middot; Ingest Layer</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ground:      #F1F4F4;
+    --surface:     #FFFFFF;
+    --surface-2:   #E7ECEC;
+    --ink:         #141A1C;
+    --ink-2:       #3D4A4C;
+    --ink-muted:   #5A6668;
+    --rule:        #D3DBDB;
+    --rule-strong: #B4C0C0;
+    --accent:      #B26A08;
+    --accent-soft: #F5E6D0;
+    --measure:     #12655F;
+    --good:        #1B6E3C;
+    --warn:        #8A6100;
+    --crit:        #9C2B2B;
+    --shadow:      0 1px 2px rgba(20,26,28,.06), 0 8px 24px rgba(20,26,28,.05);
+
+    --sans: ui-sans-serif, "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground:      #0F1416;
+      --surface:     #161D20;
+      --surface-2:   #1E282B;
+      --ink:         #E8EDED;
+      --ink-2:       #BAC7C8;
+      --ink-muted:   #95A3A5;
+      --rule:        #25302F;
+      --rule-strong: #374544;
+      --accent:      #E39A2E;
+      --accent-soft: #3A2C15;
+      --measure:     #4FB3AA;
+      --good:        #5DBE81;
+      --warn:        #D9A93A;
+      --crit:        #E07A7A;
+      --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:      #0F1416;
+    --surface:     #161D20;
+    --surface-2:   #1E282B;
+    --ink:         #E8EDED;
+    --ink-2:       #BAC7C8;
+    --ink-muted:   #95A3A5;
+    --rule:        #25302F;
+    --rule-strong: #374544;
+    --accent:      #E39A2E;
+    --accent-soft: #3A2C15;
+    --measure:     #4FB3AA;
+    --good:        #5DBE81;
+    --warn:        #D9A93A;
+    --crit:        #E07A7A;
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--measure); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  .shell {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+  }
+
+  /* ---------- masthead ---------- */
+  header.masthead {
+    grid-column: 1 / -1;
+    padding: 56px 0 32px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(38px, 6vw, 58px);
+    line-height: 1.02;
+    letter-spacing: -.033em;
+    font-weight: 660;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 60ch;
+    margin: 0 0 30px;
+    text-wrap: pretty;
+  }
+  .meta-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 34px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .meta-strip b {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- rail ---------- */
+  nav.rail {
+    position: sticky;
+    top: 28px;
+    padding-top: 44px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  nav.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.rail a {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 6px;
+    padding: 5px 8px 5px 0;
+    color: var(--ink-muted);
+    text-decoration: none;
+    border-left: 2px solid var(--rule);
+    padding-left: 12px;
+  }
+  nav.rail a:hover { color: var(--ink); border-left-color: var(--accent); }
+  nav.rail .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .rail-foot {
+    margin-top: 22px;
+    padding-left: 14px;
+    border-left: 2px solid var(--rule);
+  }
+  button.theme {
+    font: inherit;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--ink-muted);
+    background: none;
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  button.theme:hover { color: var(--ink); border-color: var(--accent); }
+
+  /* ---------- sections ---------- */
+  main { padding-top: 44px; min-width: 0; }
+  section { margin-bottom: 68px; scroll-margin-top: 24px; }
+  section > * { max-width: 68ch; }
+  section > figure, section > .wide, section > .table-wrap { max-width: none; }
+
+  h2 {
+    font-size: 13px;
+    font-family: var(--mono);
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 22px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule-strong);
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    max-width: none;
+  }
+  h2 .n { color: var(--accent); font-variant-numeric: tabular-nums; }
+  h3 {
+    font-size: 19px;
+    letter-spacing: -.011em;
+    font-weight: 620;
+    margin: 34px 0 10px;
+    text-wrap: balance;
+  }
+  p { margin: 0 0 16px; text-wrap: pretty; }
+  .lede { font-size: 17.5px; color: var(--ink-2); }
+  code {
+    font-family: var(--mono);
+    font-size: .875em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  strong { font-weight: 640; }
+
+  /* ---------- callout ---------- */
+  .note {
+    max-width: 68ch;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 2px solid var(--accent);
+    border-radius: 0 0 4px 4px;
+    padding: 18px 22px;
+    margin: 24px 0;
+    box-shadow: var(--shadow);
+  }
+  .note.warn { border-top-color: var(--crit); }
+  .note.warn .label { color: var(--crit); }
+  .note .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .note p:last-child { margin-bottom: 0; }
+
+  /* ---------- figures ---------- */
+  figure {
+    margin: 30px 0;
+    padding: 26px 24px 18px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  figure svg { display: block; max-width: 100%; height: auto; min-width: 520px; margin: 0 auto; }
+  figcaption {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    max-width: 74ch;
+  }
+  figcaption b { color: var(--ink-2); font-weight: 600; }
+
+  .svg-box { fill: var(--surface); stroke: currentColor; stroke-width: 1.5; }
+  .svg-box-alt { fill: var(--surface-2); stroke: currentColor; stroke-width: 1.5; }
+  .svg-box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.75; }
+  .svg-label { font-family: var(--mono); font-size: 12px; fill: var(--ink); }
+  .svg-sub { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-muted); }
+  .svg-edge { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-muted); }
+  .svg-accent-text { fill: var(--accent); }
+  .svg-good-text { fill: var(--good); }
+  .svg-crit-text { fill: var(--crit); }
+  .svg-line { stroke: currentColor; stroke-width: 1.5; fill: none; }
+  .svg-line-accent { stroke: var(--accent); stroke-width: 2; fill: none; }
+  .svg-line-dash { stroke: currentColor; stroke-width: 1.25; fill: none; stroke-dasharray: 4 4; }
+  .svg-line-crit { stroke: var(--crit); stroke-width: 1.75; fill: none; }
+  .svg-rule { stroke: var(--rule-strong); stroke-width: 1; fill: none; }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 26px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 480px; }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    padding-bottom: 10px;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 16px 9px 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink-muted);
+    border-bottom: 1px solid var(--rule-strong);
+    white-space: nowrap;
+  }
+  td.mono, th.mono { font-family: var(--mono); font-size: 12.5px; }
+  td.num { font-variant-numeric: tabular-nums; text-align: right; padding-right: 24px; }
+
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .chip.done { color: var(--good); }
+  .chip.next { color: var(--accent); }
+  .chip.todo { color: var(--ink-muted); }
+  .chip.real { color: var(--good); }
+  .chip.none { color: var(--crit); }
+  .chip.check { color: var(--warn); }
+
+  /* ---------- lists ---------- */
+  ul.reasons { list-style: none; padding: 0; margin: 18px 0; display: grid; gap: 16px; }
+  ul.reasons > li { padding-left: 20px; border-left: 2px solid var(--rule); }
+  ul.reasons > li > b { display: block; margin-bottom: 3px; }
+  ul.plain { padding-left: 20px; margin: 14px 0; }
+  ul.plain li { margin-bottom: 7px; }
+
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    margin: 20px 0;
+    max-width: 68ch;
+  }
+  pre .c { color: var(--ink-muted); }
+  pre .k { color: var(--accent); }
+
+  /* ---------- class cards ---------- */
+  .classes { display: grid; gap: 0; margin: 26px 0; max-width: none; }
+  .cls {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 28px;
+    padding: 20px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .cls:last-child { border-bottom: 1px solid var(--rule); }
+  .cls-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+    line-height: 1.45;
+  }
+  .cls-kind {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 3px;
+  }
+  .cls-body > p { margin: 0 0 10px; max-width: 62ch; }
+  .cls-body > p:last-child { margin-bottom: 0; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin: 26px 0;
+    max-width: none;
+    overflow: hidden;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 16px 18px;
+  }
+  .stat .v {
+    display: block;
+    font-size: 25px;
+    font-weight: 640;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  .stat .l {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-top: 5px;
+  }
+  .stat.accent .v { color: var(--accent); }
+  .stat.good .v { color: var(--good); }
+
+  footer.doc-foot {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule-strong);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-muted);
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 940px) {
+    .shell { grid-template-columns: 1fr; gap: 0; padding: 0 20px 64px; }
+    nav.rail { position: static; padding-top: 30px; }
+    nav.rail ol { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); display: grid; }
+    main { padding-top: 34px; }
+    .cls { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  /* ---------- print / PDF ---------- */
+  @media print {
+    /* Force the light palette: a PDF is printed on paper, whatever the
+       screen theme was when it was exported. */
+    :root, :root[data-theme="dark"] {
+      color-scheme: light;
+      --ground:      #FFFFFF;
+      --surface:     #FFFFFF;
+      --surface-2:   #EEF2F2;
+      --ink:         #101619;
+      --ink-2:       #333F41;
+      --ink-muted:   #556163;
+      --rule:        #C9D2D2;
+      --rule-strong: #9DAAAA;
+      --accent:      #8C5206;
+      --accent-soft: #F7EBD8;
+      --measure:     #0E524D;
+      --good:        #175C33;
+      --warn:        #6F4E00;
+      --crit:        #8A2020;
+      --shadow:      none;
+    }
+    @page { size: A4; margin: 15mm 14mm; }
+    body { background: #fff; font-size: 10.5pt; line-height: 1.5; }
+    .shell { display: block; max-width: none; padding: 0; }
+    nav.rail { display: none; }
+    header.masthead { padding: 0 0 18px; }
+    h1 { font-size: 30pt; }
+    .standfirst { font-size: 12pt; margin-bottom: 18px; }
+    main { padding-top: 24px; }
+    section { margin-bottom: 26px; break-inside: auto; }
+    h2 { break-after: avoid; margin-bottom: 14px; }
+    h3 { break-after: avoid; margin-top: 20px; }
+    figure, .note, .stat-row, table, pre, .cls { break-inside: avoid; }
+    figure { box-shadow: none; margin: 18px 0; padding: 16px 14px 12px; }
+    figure svg { min-width: 0; }
+    .stat-row { break-inside: avoid; }
+    a { color: var(--ink); text-decoration: none; }
+    footer.doc-foot { margin-top: 18px; }
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <p class="eyebrow">Build report &middot; Phase 3 &middot; Ingest layer</p>
+    <h1>From empty schema to a live record</h1>
+    <p class="standfirst">
+      VibeLive now collects real environmental measurements on a schedule, at
+      three named locations, with no vendor account, no API key, and no invented
+      numbers. This is what was built, how the parts fit together, and what the
+      data can and cannot be asked to do.
+    </p>
+    <div class="meta-strip">
+      <span>Status <b>Running</b></span>
+      <span>Operating cost <b>$0/mo</b></span>
+      <span>Free quota used <b>1.9%</b></span>
+      <span>Categories live <b>2 of 5</b></span>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <ol>
+      <li><a href="#value"><span class="n">01</span> The short version</a></li>
+      <li><a href="#topology"><span class="n">02</span> Where it sits</a></li>
+      <li><a href="#cycle"><span class="n">03</span> One cycle</a></li>
+      <li><a href="#classes"><span class="n">04</span> The parts</a></li>
+      <li><a href="#guarantees"><span class="n">05</span> Three guarantees</a></li>
+      <li><a href="#honest"><span class="n">06</span> What the data is</a></li>
+      <li><a href="#economics"><span class="n">07</span> Economics</a></li>
+      <li><a href="#next"><span class="n">08</span> What is missing</a></li>
+    </ol>
+    <div class="rail-foot">
+      <button class="theme" id="theme" type="button">Toggle theme</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- 01 -->
+    <section id="value">
+      <h2><span class="n">01</span> The short version</h2>
+      <p class="lede">
+        The asset being built here is <b>history</b> &mdash; and history is the one
+        thing that cannot be bought back later.
+      </p>
+      <p>
+        Weather and air quality are free to look up right now, on any phone. What
+        is not free, and not purchasable at any price after the fact, is a
+        continuous, timestamped, per-location record of what conditions actually
+        were. No free provider offers a history endpoint. A month of that record
+        exists only if something was running and writing it down for a month.
+        That is what shipped: the part of the system that writes it down, and
+        keeps writing it down without supervision.
+      </p>
+
+      <div class="stat-row">
+        <div class="stat accent"><span class="v">$0</span><span class="l">Monthly cost</span></div>
+        <div class="stat"><span class="v">2</span><span class="l">HTTP calls / cycle</span></div>
+        <div class="stat"><span class="v">45</span><span class="l">Readings / cycle</span></div>
+        <div class="stat good"><span class="v">~2,800</span><span class="l">Rows / day</span></div>
+        <div class="stat"><span class="v">0</span><span class="l">API keys required</span></div>
+      </div>
+
+      <ul class="reasons">
+        <li>
+          <b>No vendor relationship to manage.</b>
+          Open-Meteo needs no account, no key, and no card. There is no signup to
+          expire, no key to rotate, no billing surprise. The tradeoff is a
+          non-commercial licence, covered in <a href="#economics">section 07</a>.
+        </li>
+        <li>
+          <b>Every number is traceable to a real observation.</b>
+          Nothing is generated, interpolated, or filled in. Categories with no
+          free source stay visibly empty instead of being padded with plausible
+          curves that would be indistinguishable from real data a month later.
+        </li>
+        <li>
+          <b>It survives being left alone.</b>
+          A provider outage backs off instead of hammering. A restart resumes. A
+          duplicate reading is rejected by the database rather than quietly
+          corrupting every average computed from it.
+        </li>
+      </ul>
+
+      <div class="note">
+        <span class="label">What this is not, yet</span>
+        <p>
+          This layer collects. It does not yet analyse, narrate, or display.
+          Trend detection, the REST read surface, and the dashboard are the next
+          phase; the AI narration layer is the one after that. The value of
+          running this now is that those phases arrive to a database with real
+          history in it instead of an empty one.
+        </p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section id="topology">
+      <h2><span class="n">02</span> Where it sits</h2>
+      <p>
+        The stack gained a fourth container. <code>worker</code> is a long-lived
+        process, a sibling of <code>api</code> rather than a thread inside it,
+        and both are gated on the same migration run.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 760 250" role="img" aria-label="Startup ordering: the database becomes healthy, then the migrate container runs to completion and exits zero, and only then do the api and worker containers start. Both connect to the database. The worker additionally makes outbound calls to Open-Meteo.">
+          <defs>
+            <marker id="c2-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+            <marker id="c2-ah-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+
+          <rect class="svg-box-alt" x="16" y="92" width="140" height="62" rx="3"/>
+          <text class="svg-label" x="86" y="118" text-anchor="middle">db</text>
+          <text class="svg-sub" x="86" y="136" text-anchor="middle">postgres:15</text>
+
+          <rect class="svg-box-accent" x="228" y="92" width="140" height="62" rx="3"/>
+          <text class="svg-label svg-accent-text" x="298" y="118" text-anchor="middle">migrate</text>
+          <text class="svg-sub svg-accent-text" x="298" y="136" text-anchor="middle">runs, then exits</text>
+
+          <rect class="svg-box" x="440" y="30" width="140" height="58" rx="3"/>
+          <text class="svg-label" x="510" y="54" text-anchor="middle">api</text>
+          <text class="svg-sub" x="510" y="71" text-anchor="middle">uvicorn :8000</text>
+
+          <rect class="svg-box" x="440" y="158" width="140" height="58" rx="3"/>
+          <text class="svg-label" x="510" y="182" text-anchor="middle">worker</text>
+          <text class="svg-sub" x="510" y="199" text-anchor="middle">2 supervised loops</text>
+
+          <rect class="svg-box-alt" x="640" y="158" width="104" height="58" rx="3"/>
+          <text class="svg-label" x="692" y="182" text-anchor="middle">Open-Meteo</text>
+          <text class="svg-sub" x="692" y="199" text-anchor="middle">no API key</text>
+
+          <line class="svg-line" x1="156" y1="123" x2="221" y2="123" marker-end="url(#c2-ah)"/>
+          <text class="svg-edge" x="188" y="114" text-anchor="middle">healthy</text>
+
+          <path class="svg-line-accent" d="M 368 116 L 406 116 L 406 59 L 433 59" marker-end="url(#c2-ah-a)"/>
+          <path class="svg-line-accent" d="M 368 131 L 406 131 L 406 187 L 433 187" marker-end="url(#c2-ah-a)"/>
+          <text class="svg-edge svg-accent-text" x="400" y="128" text-anchor="end">exit 0</text>
+
+          <path class="svg-line-dash" d="M 440 45 L 412 45 L 412 14 L 86 14 L 86 88" marker-end="url(#c2-ah)"/>
+          <path class="svg-line-dash" d="M 440 202 L 412 202 L 412 236 L 86 236 L 86 158" marker-end="url(#c2-ah)"/>
+          <text class="svg-edge" x="250" y="10" text-anchor="middle">reads</text>
+          <text class="svg-edge" x="250" y="249" text-anchor="middle">writes observations</text>
+
+          <line class="svg-line" x1="580" y1="187" x2="633" y2="187" marker-end="url(#c2-ah)"/>
+          <text class="svg-edge" x="606" y="178" text-anchor="middle">HTTPS</text>
+        </svg>
+        <figcaption>
+          <b>Nothing serves or polls until migrations have finished.</b> Both
+          long-lived containers depend on <code>migrate</code> completing
+          successfully, which itself waits for the database healthcheck &mdash; so a
+          half-migrated database is unreachable rather than merely unlikely. The
+          worker is the only process making outbound calls.
+        </figcaption>
+      </figure>
+
+      <p>
+        Separating the worker from the API is a deliberate isolation boundary. A
+        poll that wedges on a slow provider consumes a worker connection and a
+        worker event loop; it cannot starve request handling, because request
+        handling is in another process with its own connection pool.
+      </p>
+    </section>
+
+    <!-- 03 -->
+    <section id="cycle">
+      <h2><span class="n">03</span> One cycle, end to end</h2>
+      <p>
+        This is the whole mechanism. Everything else in the ingest layer exists
+        to run this reliably, on a schedule, unattended.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 780 396" role="img" aria-label="One ingest cycle: the supervisor wakes the worker, which reads active locations and the active source from the database, makes a single HTTP request carrying all three coordinates, receives an array in request order, expands it into 24 observations, and inserts them in one statement where a unique index on dedup key admits new readings and rejects repeats.">
+          <defs>
+            <marker id="c3-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+            <marker id="c3-ah-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+
+          <!-- step 1 -->
+          <rect class="svg-box-accent" x="16" y="20" width="150" height="54" rx="3"/>
+          <text class="svg-label svg-accent-text" x="91" y="42" text-anchor="middle">supervise()</text>
+          <text class="svg-sub svg-accent-text" x="91" y="59" text-anchor="middle">wakes on interval</text>
+
+          <!-- step 2 -->
+          <rect class="svg-box" x="222" y="20" width="160" height="54" rx="3"/>
+          <text class="svg-label" x="302" y="42" text-anchor="middle">run_once()</text>
+          <text class="svg-sub" x="302" y="59" text-anchor="middle">WeatherWorker</text>
+
+          <!-- db reference read -->
+          <rect class="svg-box-alt" x="222" y="122" width="160" height="66" rx="3"/>
+          <text class="svg-label" x="302" y="145" text-anchor="middle">store.py</text>
+          <text class="svg-sub" x="302" y="162" text-anchor="middle">active locations</text>
+          <text class="svg-sub" x="302" y="177" text-anchor="middle">active source id</text>
+
+          <!-- provider -->
+          <rect class="svg-box" x="446" y="20" width="180" height="54" rx="3"/>
+          <text class="svg-label" x="536" y="42" text-anchor="middle">Open-Meteo</text>
+          <text class="svg-sub" x="536" y="59" text-anchor="middle">1 call, 3 coordinates</text>
+
+          <!-- parse -->
+          <rect class="svg-box" x="446" y="122" width="180" height="66" rx="3"/>
+          <text class="svg-label" x="536" y="145" text-anchor="middle">_to_observations()</text>
+          <text class="svg-sub" x="536" y="162" text-anchor="middle">3 locations x 8 metrics</text>
+          <text class="svg-sub" x="536" y="177" text-anchor="middle">= 24 Observation</text>
+
+          <!-- insert -->
+          <rect class="svg-box" x="446" y="238" width="180" height="60" rx="3"/>
+          <text class="svg-label" x="536" y="262" text-anchor="middle">insert_observations()</text>
+          <text class="svg-sub" x="536" y="279" text-anchor="middle">one unnest statement</text>
+
+          <!-- unique index gate -->
+          <rect class="svg-box-accent" x="222" y="238" width="160" height="60" rx="3"/>
+          <text class="svg-label svg-accent-text" x="302" y="262" text-anchor="middle">unique index</text>
+          <text class="svg-sub svg-accent-text" x="302" y="279" text-anchor="middle">on dedup_key</text>
+
+          <!-- outcomes -->
+          <rect class="svg-box" x="16" y="222" width="150" height="42" rx="3"/>
+          <text class="svg-label svg-good-text" x="91" y="248" text-anchor="middle">24 rows stored</text>
+
+          <rect class="svg-box" x="16" y="278" width="150" height="42" rx="3"/>
+          <text class="svg-label" x="91" y="304" text-anchor="middle">0 rows: repeat</text>
+
+          <!-- log -->
+          <rect class="svg-box-alt" x="222" y="336" width="404" height="42" rx="3"/>
+          <text class="svg-sub" x="424" y="362" text-anchor="middle">worker_logs: "3 locations, 24 readings, 24 new (0.34s)"</text>
+
+          <!-- arrows -->
+          <line class="svg-line-accent" x1="166" y1="47" x2="215" y2="47" marker-end="url(#c3-ah-a)"/>
+          <line class="svg-line" x1="382" y1="47" x2="439" y2="47" marker-end="url(#c3-ah)"/>
+          <text class="svg-edge" x="410" y="38" text-anchor="middle">GET</text>
+
+          <path class="svg-line-dash" d="M 302 78 L 302 118" marker-end="url(#c3-ah)"/>
+          <text class="svg-edge" x="310" y="102" text-anchor="start">reads</text>
+
+          <path class="svg-line" d="M 536 78 L 536 118" marker-end="url(#c3-ah)"/>
+          <text class="svg-edge" x="544" y="102" text-anchor="start">array, request order</text>
+
+          <line class="svg-line" x1="536" y1="188" x2="536" y2="234" marker-end="url(#c3-ah)"/>
+          <line class="svg-line" x1="442" y1="268" x2="389" y2="268" marker-end="url(#c3-ah)"/>
+
+          <path class="svg-line" d="M 222 258 L 194 258 L 194 243 L 173 243" marker-end="url(#c3-ah)"/>
+          <path class="svg-line-dash" d="M 222 282 L 194 282 L 194 299 L 173 299" marker-end="url(#c3-ah)"/>
+
+          <path class="svg-line-dash" d="M 91 320 L 91 357 L 215 357" marker-end="url(#c3-ah)"/>
+        </svg>
+        <figcaption>
+          <b>All three locations ride in a single HTTP request.</b> Open-Meteo
+          accepts comma-separated coordinate lists and answers with an array in
+          request order, so cycle cost is one call regardless of location count.
+          The array index is the only reliable join back to a location, so a
+          length mismatch is treated as a hard error rather than zipped over. The
+          final gate is the database's own unique index &mdash; the application asks to
+          insert 24 rows every time and Postgres decides how many are actually new.
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- 04 -->
+    <section id="classes">
+      <h2><span class="n">04</span> The parts, and what each one owns</h2>
+      <p>
+        The split is deliberate: <b>scheduling knows nothing about weather, and
+        weather knows nothing about scheduling.</b> Adding a traffic provider
+        later means writing one class with one method &mdash; not touching retry
+        logic, shutdown, logging, or the insert path.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 760 320" role="img" aria-label="Class collaboration: runner builds workers from a registry and hands each to supervise, which repeatedly calls run_once on a Worker. OpenMeteoWorker implements Worker and is specialised by WeatherWorker and AirQualityWorker, which differ only in configuration. run_once produces Observation objects and passes them to store's insert path.">
+          <defs>
+            <marker id="c4-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+            <marker id="c4-ah-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+            </marker>
+            <marker id="c4-hollow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+              <path d="M 0 0 L 12 6 L 0 12 z" fill="var(--surface)" stroke="currentColor" stroke-width="1.4"/>
+            </marker>
+          </defs>
+
+          <text class="svg-sub" x="16" y="16">PROCESS</text>
+          <rect class="svg-box" x="16" y="26" width="150" height="58" rx="3"/>
+          <text class="svg-label" x="91" y="50" text-anchor="middle">runner.py</text>
+          <text class="svg-sub" x="91" y="67" text-anchor="middle">registry, signals</text>
+
+          <text class="svg-sub" x="238" y="16">SCHEDULING</text>
+          <rect class="svg-box-accent" x="238" y="26" width="170" height="58" rx="3"/>
+          <text class="svg-label svg-accent-text" x="323" y="50" text-anchor="middle">supervise()</text>
+          <text class="svg-sub svg-accent-text" x="323" y="67" text-anchor="middle">jitter, backoff, cadence</text>
+
+          <text class="svg-sub" x="238" y="122">CONTRACT</text>
+          <rect class="svg-box" x="238" y="132" width="170" height="62" rx="3"/>
+          <text class="svg-label" x="323" y="155" text-anchor="middle">Worker (ABC)</text>
+          <text class="svg-sub" x="323" y="172" text-anchor="middle">run_once() -> str</text>
+          <text class="svg-sub" x="323" y="186" text-anchor="middle">setup / teardown</text>
+
+          <text class="svg-sub" x="238" y="232">PROVIDER</text>
+          <rect class="svg-box" x="238" y="242" width="170" height="62" rx="3"/>
+          <text class="svg-label" x="323" y="265" text-anchor="middle">OpenMeteoWorker</text>
+          <text class="svg-sub" x="323" y="282" text-anchor="middle">_fetch, _to_observations</text>
+
+          <rect class="svg-box-alt" x="452" y="242" width="136" height="28" rx="3"/>
+          <text class="svg-sub" x="520" y="260" text-anchor="middle">WeatherWorker</text>
+          <rect class="svg-box-alt" x="452" y="276" width="136" height="28" rx="3"/>
+          <text class="svg-sub" x="520" y="294" text-anchor="middle">AirQualityWorker</text>
+
+          <text class="svg-sub" x="608" y="122">PERSISTENCE</text>
+          <rect class="svg-box" x="608" y="132" width="136" height="62" rx="3"/>
+          <text class="svg-label" x="676" y="155" text-anchor="middle">store.py</text>
+          <text class="svg-sub" x="676" y="172" text-anchor="middle">Observation</text>
+          <text class="svg-sub" x="676" y="186" text-anchor="middle">insert path</text>
+
+          <rect class="svg-box-alt" x="452" y="26" width="136" height="58" rx="3"/>
+          <text class="svg-label" x="520" y="50" text-anchor="middle">record()</text>
+          <text class="svg-sub" x="520" y="67" text-anchor="middle">worker_logs</text>
+
+          <!-- arrows -->
+          <line class="svg-line" x1="166" y1="55" x2="231" y2="55" marker-end="url(#c4-ah)"/>
+          <text class="svg-edge" x="198" y="46" text-anchor="middle">hands off</text>
+
+          <line class="svg-line-accent" x1="323" y1="84" x2="323" y2="128" marker-end="url(#c4-ah-a)"/>
+          <text class="svg-edge svg-accent-text" x="331" y="110" text-anchor="start">calls run_once()</text>
+
+          <line class="svg-line" x1="323" y1="238" x2="323" y2="198" marker-end="url(#c4-hollow)"/>
+          <text class="svg-edge" x="331" y="222" text-anchor="start">implements</text>
+
+          <path class="svg-line" d="M 408 256 L 445 256" marker-end="url(#c4-hollow)"/>
+          <path class="svg-line" d="M 408 290 L 445 290" marker-end="url(#c4-hollow)"/>
+
+          <path class="svg-line" d="M 596 258 L 676 258 L 676 200" marker-end="url(#c4-ah)"/>
+          <text class="svg-edge" x="666" y="228" text-anchor="end">Observation[]</text>
+
+          <line class="svg-line-accent" x1="408" y1="55" x2="445" y2="55" marker-end="url(#c4-ah-a)"/>
+        </svg>
+        <figcaption>
+          <b>Hollow arrowheads are "is a", solid are "calls".</b>
+          <code>supervise()</code> only ever sees the <code>Worker</code>
+          contract, which is why it can schedule a future traffic or sensor
+          worker without modification. The two concrete workers at right are
+          configuration, not logic &mdash; they set a URL, a category, and a metric map.
+        </figcaption>
+      </figure>
+
+      <div class="classes">
+        <div class="cls">
+          <div class="cls-name">Worker<span class="cls-kind">Abstract base class</span></div>
+          <div class="cls-body">
+            <p>
+              The contract, and deliberately tiny: a <code>name</code>, an
+              <code>interval_seconds</code>, and an async <code>run_once()</code>
+              that does one unit of work and returns a one-line summary. Optional
+              <code>setup()</code> and <code>teardown()</code> bracket the loop
+              for resources like an HTTP client.
+            </p>
+            <p>
+              Returning a summary string rather than logging internally is what
+              lets the scheduler own the log format, so every worker's output
+              reads the same in <code>worker_logs</code> without any of them
+              agreeing on a convention.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">supervise()<span class="cls-kind">Scheduler coroutine</span></div>
+          <div class="cls-body">
+            <p>
+              Wraps any <code>Worker</code> in the loop that makes it survivable.
+              It applies <b>startup jitter</b> so workers booting together don't
+              fire in lockstep forever, <b>drift-corrected cadence</b> so a run
+              that took 40 seconds waits <code>interval &minus; 40</code> rather than
+              sliding later every cycle, and <b>exponential backoff</b> on
+              consecutive failures, reset by a single success.
+            </p>
+            <p>
+              It also catches everything a worker can throw. An exception is a
+              logged failure and a longer sleep, never a dead loop &mdash; the process
+              does not need a supervisor of its own.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">record()<span class="cls-kind">Log function</span></div>
+          <div class="cls-body">
+            <p>
+              Appends a line to the <code>worker_logs</code> table, and is written
+              so it can never raise. The database is also the thing most likely to
+              be down at the exact moment there is something worth logging, so a
+              failed log write degrades to stdout instead of propagating and
+              killing the worker it was trying to describe.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">OpenMeteoWorker<span class="cls-kind">Provider base</span></div>
+          <div class="cls-body">
+            <p>
+              Everything specific to this provider: build one request carrying
+              every active location, verify the response array length matches,
+              convert the provider's timestamp to an absolute instant, and expand
+              each entry into one <code>Observation</code> per metric.
+            </p>
+            <p>
+              A metric the model has no value for is <b>skipped</b>, not stored as
+              zero. Zero is a measurement; absence is not.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">WeatherWorker<br>AirQualityWorker<span class="cls-kind">Concrete workers</span></div>
+          <div class="cls-body">
+            <p>
+              Pure configuration &mdash; a name, a category, a base URL, and a map from
+              the provider's field names to ours. Eight metrics for weather, seven
+              for air quality. No logic, which is the point: a third provider is a
+              similar block of declarations plus one <code>_fetch</code>.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">Observation<span class="cls-kind">Frozen dataclass</span></div>
+          <div class="cls-body">
+            <p>
+              One number, from one source, about one location, at one instant.
+              Immutable by construction. Its most important member is the computed
+              <code>dedup_key</code>, built from the instant the <b>provider</b>
+              observed rather than the moment we polled &mdash; the distinction that
+              section 05 turns on.
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">store.py<span class="cls-kind">Persistence module</span></div>
+          <div class="cls-body">
+            <p>
+              The only write path into <code>human_activity</code>, plus the
+              reference lookups every ingest worker needs. Rows are inserted with
+              a single <code>unnest</code> statement &mdash; one round trip instead of
+              N, and Postgres reports how many rows were genuinely new, which is
+              what distinguishes "the provider refreshed" from "we polled too fast".
+            </p>
+          </div>
+        </div>
+
+        <div class="cls">
+          <div class="cls-name">runner.py<span class="cls-kind">Process entrypoint</span></div>
+          <div class="cls-body">
+            <p>
+              Opens one connection pool, builds workers from a name registry
+              driven by the <code>ENABLED_WORKERS</code> setting, and runs them as
+              sibling tasks. An unknown name fails at startup with the list of
+              valid ones rather than silently running nothing.
+            </p>
+            <p>
+              It installs SIGTERM and SIGINT handlers that set a shared stop
+              event, so <code>docker compose stop</code> lets every worker finish
+              the cycle it is in. Without that, the default is a ten-second wait
+              and then a kill, mid-insert.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section id="guarantees">
+      <h2><span class="n">05</span> Three guarantees, each verified</h2>
+
+      <h3>Polling faster than the source cannot inflate the data</h3>
+      <p>
+        This is the one that would have been invisible. Open-Meteo refreshes
+        weather roughly every fifteen minutes; the worker polls every ten. Some
+        polls therefore return an observation already seen. Stored twice, it
+        counts as two independent samples and biases every average and every
+        trend magnitude computed downstream &mdash; with no error, no warning, and no
+        way to detect it afterwards.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 760 250" role="img" aria-label="Timeline comparison: the provider publishes a new observation every fifteen minutes while the worker polls every ten minutes. Polls that land on an already-seen observation produce the same dedup key and are rejected by the unique index, so only genuinely new observations become rows.">
+          <defs>
+            <marker id="c5-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- provider timeline -->
+          <text class="svg-sub" x="16" y="34">PROVIDER PUBLISHES</text>
+          <line class="svg-rule" x1="16" y1="62" x2="744" y2="62"/>
+          <circle cx="90" cy="62" r="5" fill="var(--accent)"/>
+          <circle cx="290" cy="62" r="5" fill="var(--accent)"/>
+          <circle cx="490" cy="62" r="5" fill="var(--accent)"/>
+          <circle cx="690" cy="62" r="5" fill="var(--accent)"/>
+          <text class="svg-sub svg-accent-text" x="90" y="52" text-anchor="middle">18:30</text>
+          <text class="svg-sub svg-accent-text" x="290" y="52" text-anchor="middle">18:45</text>
+          <text class="svg-sub svg-accent-text" x="490" y="52" text-anchor="middle">19:00</text>
+          <text class="svg-sub svg-accent-text" x="690" y="52" text-anchor="middle">19:15</text>
+          <text class="svg-edge" x="190" y="80" text-anchor="middle">15 min</text>
+
+          <!-- worker timeline -->
+          <text class="svg-sub" x="16" y="126">WORKER POLLS</text>
+          <line class="svg-rule" x1="16" y1="154" x2="744" y2="154"/>
+          <circle cx="90" cy="154" r="5" fill="currentColor"/>
+          <circle cx="223" cy="154" r="5" fill="currentColor"/>
+          <circle cx="356" cy="154" r="5" fill="currentColor"/>
+          <circle cx="490" cy="154" r="5" fill="currentColor"/>
+          <circle cx="623" cy="154" r="5" fill="currentColor"/>
+          <text class="svg-sub" x="90" y="144" text-anchor="middle">18:30</text>
+          <text class="svg-sub" x="223" y="144" text-anchor="middle">18:40</text>
+          <text class="svg-sub" x="356" y="144" text-anchor="middle">18:50</text>
+          <text class="svg-sub" x="490" y="144" text-anchor="middle">19:00</text>
+          <text class="svg-sub" x="623" y="144" text-anchor="middle">19:10</text>
+          <text class="svg-edge" x="156" y="172" text-anchor="middle">10 min</text>
+
+          <!-- outcome -->
+          <text class="svg-sub" x="16" y="216">RESULT</text>
+          <line class="svg-line" x1="90" y1="160" x2="90" y2="200" marker-end="url(#c5-ah)"/>
+          <text class="svg-sub svg-good-text" x="90" y="216" text-anchor="middle">stored</text>
+          <line class="svg-line-crit" x1="223" y1="160" x2="223" y2="200" marker-end="url(#c5-ah)"/>
+          <text class="svg-sub svg-crit-text" x="223" y="216" text-anchor="middle">rejected</text>
+          <text class="svg-sub svg-crit-text" x="223" y="232" text-anchor="middle">same key</text>
+          <line class="svg-line" x1="356" y1="160" x2="356" y2="200" marker-end="url(#c5-ah)"/>
+          <text class="svg-sub svg-good-text" x="356" y="216" text-anchor="middle">stored</text>
+          <text class="svg-sub" x="356" y="232" text-anchor="middle">18:45 obs</text>
+          <line class="svg-line" x1="490" y1="160" x2="490" y2="200" marker-end="url(#c5-ah)"/>
+          <text class="svg-sub svg-good-text" x="490" y="216" text-anchor="middle">stored</text>
+          <line class="svg-line-crit" x1="623" y1="160" x2="623" y2="200" marker-end="url(#c5-ah)"/>
+          <text class="svg-sub svg-crit-text" x="623" y="216" text-anchor="middle">rejected</text>
+          <text class="svg-sub svg-crit-text" x="623" y="232" text-anchor="middle">same key</text>
+        </svg>
+        <figcaption>
+          <b>The key is the provider's observation instant, not our poll time.</b>
+          A poll at 18:40 receives the 18:30 observation, computes the identical
+          <code>dedup_key</code>, and is refused by the unique index. Verified by
+          running two cycles back to back: the second reported
+          <code>24 readings, 0 new, 24 already stored</code>.
+        </figcaption>
+      </figure>
+
+      <h3>A source can be switched off at the database</h3>
+      <p>
+        Every worker resolves its source through
+        <code>active_source_id()</code>, which returns nothing for a source
+        marked inactive. The worker then does nothing and says so. This is what
+        makes the deactivated <code>simulated_crowd</code> and
+        <code>simulated_noise</code> sources structurally unwritable rather than
+        merely unused &mdash; the "no invented data" rule is enforced by a column, not
+        by remembering.
+      </p>
+      <p>
+        It proved itself unprompted during the build: the workers ran once before
+        the migration that activates <code>open_meteo</code> had been applied, and
+        logged <code>source open_meteo is inactive &mdash; nothing ingested</code>
+        instead of writing anything.
+      </p>
+
+      <h3>Failure decays instead of hammering</h3>
+      <p>
+        Consecutive failures back off exponentially from the normal interval up
+        to a fifteen-minute ceiling; one success resets the counter to zero. A
+        provider outage therefore costs a handful of requests per hour rather
+        than one every ten minutes forever, and recovery is immediate rather than
+        waiting out a long penalty.
+      </p>
+
+      <div class="note">
+        <span class="label">Found while committing</span>
+        <p>
+          The migration runner fingerprints each migration's <b>text</b>. Git on
+          Windows was configured to rewrite line endings on checkout, which
+          changes that fingerprint &mdash; so a fresh clone would have failed every
+          migration as "edited after it was applied" when nothing had been edited.
+          A <code>.gitattributes</code> pinning the tree to LF now prevents it.
+        </p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section id="honest">
+      <h2><span class="n">06</span> What the data honestly is</h2>
+      <p class="lede">
+        The measurements are real. They are also less spatially precise than
+        three separate rows per reading would suggest, and that is worth
+        understanding before anyone builds a conclusion on top of them.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 760 268" role="img" aria-label="Three locations about one kilometre apart all fall inside a single model grid cell, so the provider returns the same values for each; the database stores three rows that share a grid coordinate and differ only in pressure, which is elevation adjusted.">
+          <defs>
+            <marker id="c6-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <text class="svg-sub" x="16" y="20">REQUESTED COORDINATES</text>
+          <rect class="svg-box" x="16" y="34" width="176" height="30" rx="3"/>
+          <text class="svg-sub" x="104" y="53" text-anchor="middle">Main Square</text>
+          <rect class="svg-box" x="16" y="72" width="176" height="30" rx="3"/>
+          <text class="svg-sub" x="104" y="91" text-anchor="middle">City Mall</text>
+          <rect class="svg-box" x="16" y="110" width="176" height="30" rx="3"/>
+          <text class="svg-sub" x="104" y="129" text-anchor="middle">Train Station</text>
+          <text class="svg-edge" x="104" y="160" text-anchor="middle">~1 km apart</text>
+
+          <!-- grid cell -->
+          <text class="svg-sub" x="268" y="20">MODEL GRID CELL</text>
+          <rect class="svg-box-accent" x="268" y="34" width="196" height="106" rx="3"/>
+          <text class="svg-label svg-accent-text" x="366" y="72" text-anchor="middle">32.0625, 34.875</text>
+          <text class="svg-sub svg-accent-text" x="366" y="92" text-anchor="middle">one cell, ~11 km</text>
+          <text class="svg-sub svg-accent-text" x="366" y="110" text-anchor="middle">27.5 &deg;C</text>
+
+          <path class="svg-line" d="M 192 49 L 230 49 L 230 87 L 261 87" marker-end="url(#c6-ah)"/>
+          <path class="svg-line" d="M 192 87 L 261 87" marker-end="url(#c6-ah)"/>
+          <path class="svg-line" d="M 192 125 L 230 125 L 230 87 L 261 87" marker-end="url(#c6-ah)"/>
+          <text class="svg-edge" x="226" y="30" text-anchor="middle">snap</text>
+
+          <!-- stored rows -->
+          <text class="svg-sub" x="540" y="20">STORED ROWS</text>
+          <rect class="svg-box" x="540" y="34" width="204" height="30" rx="3"/>
+          <text class="svg-sub" x="642" y="53" text-anchor="middle">loc 1 &middot; temp_c 27.5</text>
+          <rect class="svg-box" x="540" y="72" width="204" height="30" rx="3"/>
+          <text class="svg-sub" x="642" y="91" text-anchor="middle">loc 2 &middot; temp_c 27.5</text>
+          <rect class="svg-box" x="540" y="110" width="204" height="30" rx="3"/>
+          <text class="svg-sub" x="642" y="129" text-anchor="middle">loc 3 &middot; temp_c 27.5</text>
+
+          <line class="svg-line" x1="464" y1="87" x2="533" y2="87" marker-end="url(#c6-ah)"/>
+          <text class="svg-edge" x="498" y="78" text-anchor="middle">fan out</text>
+
+          <text class="svg-sub" x="500" y="176">raw_json keeps grid_lat / grid_lng</text>
+          <text class="svg-sub" x="500" y="194">so shared provenance is auditable</text>
+
+          <line class="svg-rule" x1="16" y1="222" x2="744" y2="222"/>
+          <text class="svg-sub" x="16" y="244">ONLY pressure_hpa DIFFERS &mdash; 1002.9 / 1003.6 &mdash; BECAUSE IT IS ELEVATION-ADJUSTED (57 / 62 / 56 m)</text>
+        </svg>
+        <figcaption>
+          <b>Three rows, one underlying measurement.</b> Open-Meteo serves a
+          weather model on a grid, not a sensor at your coordinate, and the
+          response echoes the cell it snapped to. Per-location comparison is
+          therefore meaningless for weather and air quality at this spacing. It
+          becomes meaningful only with genuinely per-location sources &mdash; traffic
+          segments or physical sensors.
+        </figcaption>
+      </figure>
+
+      <div class="table-wrap">
+        <table>
+          <caption>Category coverage</caption>
+          <thead>
+            <tr><th>Category</th><th>Source</th><th>Metrics</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">weather</td><td>Open-Meteo Forecast</td><td>temp, feels-like, humidity, precip, cloud, wind, gusts, pressure</td><td><span class="chip real">Live</span></td></tr>
+            <tr><td class="mono">pollution</td><td>Open-Meteo Air Quality</td><td>European AQI, PM2.5, PM10, NO&#8322;, SO&#8322;, O&#8323;, CO</td><td><span class="chip real">Live</span></td></tr>
+            <tr><td class="mono">traffic</td><td>TomTom</td><td>Congestion ratio, incident feed</td><td><span class="chip check">Needs free key</span></td></tr>
+            <tr><td class="mono">crowd</td><td>&mdash;</td><td>&mdash;</td><td><span class="chip none">Empty</span></td></tr>
+            <tr><td class="mono">noise</td><td>&mdash;</td><td>&mdash;</td><td><span class="chip none">Empty</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="reasons">
+        <li>
+          <b>Air quality is hourly at source.</b>
+          Weather refreshes about every fifteen minutes, air quality once an
+          hour. A thirty-minute pollution window will frequently contain one
+          sample or none, so trend detection on pollution needs a longer window
+          than trend detection on weather.
+        </li>
+        <li>
+          <b>There is no backfill, ever.</b>
+          These endpoints serve current conditions only. History exists solely
+          for the period the worker was running. Downtime is a permanent hole in
+          the record, which is why backups matter more here than in a system
+          whose data can be re-fetched.
+        </li>
+        <li>
+          <b>Crowd and noise are empty on purpose.</b>
+          Waze is partner-only, Google Places publishes no popular-times
+          endpoint, and ambient noise has no free feed at all. The honest output
+          is a gap, clearly labelled.
+        </li>
+      </ul>
+    </section>
+
+    <!-- 07 -->
+    <section id="economics">
+      <h2><span class="n">07</span> Economics</h2>
+      <p>
+        The ingest layer's running cost is zero and its quota headroom is large
+        enough that scale is not the binding constraint &mdash; the licence is.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <caption>Daily consumption at three locations</caption>
+          <thead>
+            <tr><th>Worker</th><th class="num">Interval</th><th class="num">Calls / day</th><th class="num">Rows / day</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">open_meteo_weather</td><td class="num">10 min</td><td class="num">144</td><td class="num">2,304</td></tr>
+            <tr><td class="mono">open_meteo_pollution</td><td class="num">30 min</td><td class="num">48</td><td class="num">504</td></tr>
+            <tr><td class="mono">total</td><td class="num">&mdash;</td><td class="num">192</td><td class="num">2,808</td></tr>
+            <tr><td class="mono">free tier ceiling</td><td class="num">&mdash;</td><td class="num">~10,000</td><td class="num">&mdash;</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        That is roughly <b>1.9% of the daily allowance</b>, because cost scales
+        with cycles rather than locations &mdash; every location rides in the same
+        request. Adding locations costs rows, not calls. Roughly one million rows
+        a year is comfortable for Postgres, but it is the reason a retention
+        policy is on the list rather than an afterthought.
+      </p>
+
+      <div class="note warn">
+        <span class="label">The real constraint</span>
+        <p>
+          Open-Meteo's free tier is <b>non-commercial</b>, under CC-BY-4.0. As a
+          personal project this is fine. If VibeLive ever becomes a work product,
+          that licence is a blocker and the switch is to OpenWeather &mdash; which is
+          why migration <code>0010</code> left the <code>openweather</code> source
+          in place and inactive rather than deleting it. Changing provider is
+          then a key, a subclass, and a flag.
+        </p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section id="next">
+      <h2><span class="n">08</span> What is deliberately missing</h2>
+      <p>
+        Naming these is more useful than a clean bill of health, because every
+        one of them is a decision rather than an oversight.
+      </p>
+      <ul class="plain">
+        <li><b>No automated backups.</b> A dump was taken by hand during the build. Given that history cannot be re-fetched, a scheduled <code>pg_dump</code> is the highest-value remaining item in this layer.</li>
+        <li><b>No retention policy.</b> At ~2,800 rows a day nothing breaks for a long time, but "a long time" is not a policy.</li>
+        <li><b>No trend analysis or read API.</b> The next phase: windowed comparison into <code>conclusions</code>, read endpoints, and a dashboard to replace the explorer redirect.</li>
+        <li><b>No AI narration.</b> Every provider costs money, so conclusions will carry <code>ai_skipped_reason</code> and the dashboard will render trends computed from the numbers. A local model can fill this in for free later.</li>
+        <li><b>No authentication, and the SQL explorer is still open.</b> Correct for a single operator on localhost, unacceptable on any reachable host. <code>ENABLE_EXPLORER</code> must be false before this machine is exposed.</li>
+        <li><b>Not yet pushed to GitHub.</b> Both commits exist locally only; the remote push needs credentials that are not configured on this machine.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="doc-foot">
+    <span>VibeLive &middot; ingest layer &middot; phase 3</span>
+    <span>Verified against a destroyed and rebuilt volume</span>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('theme');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var root = document.documentElement;
+      var isDark = root.getAttribute('data-theme') === 'dark';
+      if (!root.hasAttribute('data-theme')) {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+  })();
+</script>
