@@ -21,9 +21,26 @@ docker compose up -d --build
 for `db` to be healthy — so a single `up` always lands on a fully migrated
 database.
 
+- http://localhost:8000/ — operator dashboard
 - http://localhost:8000/health — liveness + DB reachability
 - http://localhost:8000/explorer — read-only DB explorer
 - http://localhost:8000/docs — OpenAPI
+
+## Read API
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/locations` | Active locations |
+| `GET /api/coverage?hours=` | Every category, including empty ones. `live` is computed from observations that actually arrived, not from config — an enabled-but-failing worker reads as not live |
+| `GET /api/readings?location_id=&hours=` | Every metric for one location: latest, change over the window, and the full series for sparklines |
+
+`/api/readings` answers a whole dashboard in one call, because splitting it
+would mean one request per metric and fifteen metrics per location. `hours` is
+capped at 168.
+
+The dashboard renders change over the span **actually covered by the data**,
+not the window requested — with 30 minutes of history a "24h" window holds one
+hour of observations, and labelling that change "over 24h" would overstate it.
 
 Connection string: `postgresql://vibelive:secret@localhost:5432/vibelive`
 
@@ -114,8 +131,8 @@ vibelive/
   migrate.py         migration runner
   api/
     main.py          FastAPI app + lifespan-owned pool
-    routers/         health, explorer
-    static/          explorer.html
+    routers/         health, readings, explorer
+    static/          dashboard.html, explorer.html
   workers/
     __main__.py      `python -m vibelive.workers`
     base.py          Worker ABC, scheduling, backoff, worker_logs

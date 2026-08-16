@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VibeLive · Dashboard</title>
+<style>
+  /* Tokens are the explorer's, so moving between / and /explorer does not
+     feel like moving between two products. Only --warning and the sparkline
+     fill are new. */
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --plane: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --hover: rgba(11, 11, 11, 0.04);
+    --series-1: #2a78d6;
+    --series-fill: rgba(42, 120, 214, 0.13);
+    --good: #0ca30c;
+    --warning: #a86a00;
+    --critical: #d03b3b;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --plane: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --hover: rgba(255, 255, 255, 0.06);
+      --series-1: #3987e5;
+      --series-fill: rgba(57, 135, 229, 0.18);
+      --good: #35c035;
+      --warning: #d9a93a;
+      --critical: #e26b6b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --plane: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --hover: rgba(255, 255, 255, 0.06);
+    --series-1: #3987e5;
+    --series-fill: rgba(57, 135, 229, 0.18);
+    --good: #35c035;
+    --warning: #d9a93a;
+    --critical: #e26b6b;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--text-primary);
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
+
+  /* ---- header ---- */
+  header { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--text-muted); font-size: 13px; margin: 2px 0 0; }
+  .spacer { flex: 1 1 auto; }
+  .head-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 500;
+    background: var(--surface-1); border: 1px solid var(--border); color: var(--text-secondary);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--text-muted); }
+  .dot.ok { background: var(--good); }
+  .dot.bad { background: var(--critical); }
+  .dot.warn { background: var(--warning); }
+
+  button, select {
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  button:hover, select:hover { background: var(--hover); color: var(--text-primary); }
+  button:focus-visible, select:focus-visible, a:focus-visible {
+    outline: 2px solid var(--series-1); outline-offset: 2px;
+  }
+  a { color: var(--series-1); text-underline-offset: 3px; }
+
+  .controls {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .controls label {
+    font-size: 12.5px; color: var(--text-muted);
+  }
+
+  /* ---- coverage strip ---- */
+  .coverage {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+    gap: 10px; margin-bottom: 12px;
+  }
+  .cov {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .cov.empty { border-style: dashed; background: transparent; }
+  .cov .name {
+    font-size: 13px; font-weight: 600; text-transform: capitalize;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .cov .meta { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px; border: 1px solid currentColor;
+  }
+  .chip.live { color: var(--good); }
+  .chip.none { color: var(--critical); }
+  .chip.wait { color: var(--warning); }
+
+  .provenance {
+    font-size: 12.5px; color: var(--text-muted);
+    border-left: 2px solid var(--border); padding-left: 12px;
+    margin: 0 0 26px; max-width: 92ch;
+  }
+
+  /* ---- sections ---- */
+  section { margin-bottom: 30px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 12px;
+  }
+  h2 {
+    font-size: 13px; font-weight: 600; margin: 0; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-secondary);
+  }
+  .sec-note { font-size: 12.5px; color: var(--text-muted); }
+
+  /* ---- metric cards ---- */
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 16px 10px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .card .label { font-size: 12.5px; color: var(--text-secondary); }
+  .card .value {
+    font-size: 29px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+  .card .value .unit {
+    font-size: 14px; font-weight: 500; color: var(--text-muted);
+    margin-left: 3px; letter-spacing: 0;
+  }
+  /* Direction is neutral ink, not red/green: a temperature going up is not
+     "bad", and the status colors are reserved for actual state. */
+  .card .delta {
+    font-size: 12.5px; color: var(--text-muted);
+    font-variant-numeric: tabular-nums; min-height: 19px;
+  }
+  .card .delta .arrow { color: var(--text-secondary); font-weight: 600; }
+
+  .spark { position: relative; margin-top: 8px; }
+  .spark svg { display: block; width: 100%; height: 46px; overflow: visible; }
+  .spark .thin {
+    font-size: 11.5px; color: var(--text-muted); height: 46px;
+    display: flex; align-items: center;
+  }
+  .tip {
+    position: absolute; pointer-events: none; opacity: 0;
+    transform: translate(-50%, -100%);
+    background: var(--text-primary); color: var(--plane);
+    font-size: 11.5px; font-variant-numeric: tabular-nums;
+    padding: 4px 7px; border-radius: 5px; white-space: nowrap;
+    transition: opacity .09s linear; z-index: 3;
+  }
+  .spark:hover .tip { opacity: 1; }
+  .card .foot {
+    font-size: 11.5px; color: var(--text-muted); margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- empty state ---- */
+  .empties { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .empty-card {
+    border: 1px dashed var(--border); border-radius: 12px;
+    padding: 16px; background: transparent;
+  }
+  .empty-card .label { font-size: 13px; font-weight: 600; text-transform: capitalize; }
+  .empty-card p { font-size: 12.5px; color: var(--text-muted); margin: 6px 0 0; }
+
+  .msg {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px; color: var(--text-secondary);
+  }
+  .msg.err { border-color: var(--critical); color: var(--critical); }
+
+  footer {
+    margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+    display: flex; gap: 18px; flex-wrap: wrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>VibeLive</h1>
+      <p class="sub">What is happening around a point in the city, and whether it is changing.</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="head-actions">
+      <span class="pill" id="status"><span class="dot" id="statusDot"></span><span id="statusText">connecting</span></span>
+      <button id="theme" type="button">Theme</button>
+    </div>
+  </header>
+
+  <div class="controls">
+    <label for="loc">Location</label>
+    <select id="loc"></select>
+    <label for="hours">Window</label>
+    <select id="hours">
+      <option value="6">6 hours</option>
+      <option value="24" selected>24 hours</option>
+      <option value="72">3 days</option>
+      <option value="168">7 days</option>
+    </select>
+    <button id="refresh" type="button">Refresh</button>
+  </div>
+
+  <div class="coverage" id="coverage"></div>
+  <p class="provenance" id="provenance"></p>
+
+  <div id="content"></div>
+
+  <footer>
+    <span id="generated">&nbsp;</span>
+    <span><a href="/explorer">DB explorer</a></span>
+    <span><a href="/docs">API docs</a></span>
+    <span><a href="/health">Health</a></span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Presentation names live here, not in the API: the API returns what the
+  // provider measured, the UI decides what to call it.
+  var LABELS = {
+    temp_c: "Temperature", feels_like_c: "Feels like", humidity_pct: "Humidity",
+    precip_mm: "Precipitation", cloud_pct: "Cloud cover", wind_kmh: "Wind",
+    wind_gust_kmh: "Gusts", pressure_hpa: "Pressure",
+    aqi_eu: "European AQI", pm2_5: "PM2.5", pm10: "PM10",
+    no2: "Nitrogen dioxide", so2: "Sulphur dioxide", o3: "Ozone", co: "Carbon monoxide"
+  };
+  var ORDER = ["temp_c", "feels_like_c", "humidity_pct", "wind_kmh", "wind_gust_kmh",
+               "cloud_pct", "precip_mm", "pressure_hpa",
+               "aqi_eu", "pm2_5", "pm10", "no2", "o3", "so2", "co"];
+
+  // Why a category is empty. Stated in the UI rather than left as a blank
+  // card, because "no data" and "no source" are different facts.
+  var NO_SOURCE = {
+    crowd: "No free source. Waze is partner-only and Google Places publishes no popular-times endpoint. Nothing is generated to fill the gap.",
+    noise: "No free source. Ambient noise needs a physical sensor; none is deployed.",
+    traffic: "TomTom offers a free tier but needs an API key. No key is configured, so no traffic worker runs."
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { locations: [], locationId: null, hours: 24 };
+
+  function fmt(v) {
+    if (v === null || v === undefined) return "—";
+    var a = Math.abs(v);
+    if (a >= 1000) return v.toFixed(0);
+    if (a >= 100) return v.toFixed(0);
+    if (a >= 10) return v.toFixed(1);
+    return v.toFixed(1);
+  }
+
+  function timeLabel(iso) {
+    var d = new Date(iso);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  // The window asked for is not the span actually covered. With 30 minutes of
+  // history a "24h" window holds one hour of observations, and labelling that
+  // change "over 24h" would overstate what the data says.
+  function spanLabel(first, last) {
+    var mins = Math.round((new Date(last).getTime() - new Date(first).getTime()) / 60000);
+    if (mins < 60) return "over " + mins + " min";
+    var h = mins / 60;
+    if (h < 24) return "over " + (h % 1 ? h.toFixed(1) : h) + "h";
+    return "over " + Math.round(h / 24) + "d";
+  }
+
+  function ago(iso) {
+    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return mins + " min ago";
+    var h = Math.floor(mins / 60);
+    if (h < 24) return h + "h ago";
+    return Math.floor(h / 24) + "d ago";
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  // ---- sparkline -------------------------------------------------------
+  // Single series, so identity comes from the card title and no legend is
+  // needed. Flat series get a centered line rather than a divide-by-zero.
+  function sparkline(points, unit) {
+    var W = 240, H = 46, PAD = 4;
+    var wrap = el("div", "spark");
+
+    if (points.length < 2) {
+      wrap.appendChild(el("div", "thin", points.length + " observation so far — no trend yet"));
+      return wrap;
+    }
+
+    var values = points.map(function (p) { return p[1]; });
+    var min = Math.min.apply(null, values), max = Math.max.apply(null, values);
+    var span = max - min;
+    var t0 = new Date(points[0][0]).getTime();
+    var t1 = new Date(points[points.length - 1][0]).getTime();
+    var tspan = t1 - t0 || 1;
+
+    function x(i) { return (new Date(points[i][0]).getTime() - t0) / tspan * W; }
+    function y(v) {
+      if (!span) return H / 2;
+      return H - PAD - ((v - min) / span) * (H - PAD * 2);
+    }
+
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label",
+      points.length + " observations, from " + fmt(values[0]) + " to " +
+      fmt(values[values.length - 1]) + " " + (unit || ""));
+
+    var d = "", area = "";
+    for (var i = 0; i < points.length; i++) {
+      d += (i ? "L" : "M") + x(i).toFixed(2) + " " + y(values[i]).toFixed(2) + " ";
+    }
+    area = d + "L" + W + " " + H + " L0 " + H + " Z";
+
+    var fill = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    fill.setAttribute("d", area);
+    fill.setAttribute("fill", "var(--series-fill)");
+    svg.appendChild(fill);
+
+    var line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    line.setAttribute("d", d.trim());
+    line.setAttribute("fill", "none");
+    line.setAttribute("stroke", "var(--series-1)");
+    line.setAttribute("stroke-width", "2");
+    line.setAttribute("stroke-linejoin", "round");
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.appendChild(line);
+
+    // Emphasised endpoint with a surface ring, so it reads on the fill.
+    var last = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    last.setAttribute("cx", x(points.length - 1));
+    last.setAttribute("cy", y(values[values.length - 1]));
+    last.setAttribute("r", "3");
+    last.setAttribute("fill", "var(--series-1)");
+    last.setAttribute("stroke", "var(--surface-1)");
+    last.setAttribute("stroke-width", "2");
+    last.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.appendChild(last);
+
+    var cross = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    cross.setAttribute("y1", "0");
+    cross.setAttribute("y2", H);
+    cross.setAttribute("stroke", "var(--axis)");
+    cross.setAttribute("stroke-width", "1");
+    cross.setAttribute("vector-effect", "non-scaling-stroke");
+    cross.style.opacity = "0";
+    svg.appendChild(cross);
+
+    wrap.appendChild(svg);
+    var tip = el("div", "tip");
+    wrap.appendChild(tip);
+
+    svg.addEventListener("mousemove", function (ev) {
+      var r = svg.getBoundingClientRect();
+      var frac = (ev.clientX - r.left) / r.width;
+      var i = Math.max(0, Math.min(points.length - 1, Math.round(frac * (points.length - 1))));
+      cross.setAttribute("x1", x(i));
+      cross.setAttribute("x2", x(i));
+      cross.style.opacity = "1";
+      tip.textContent = fmt(values[i]) + (unit ? " " + unit : "") + " · " + timeLabel(points[i][0]);
+      tip.style.left = (x(i) / W * r.width) + "px";
+      tip.style.top = "-2px";
+    });
+    svg.addEventListener("mouseleave", function () { cross.style.opacity = "0"; });
+
+    return wrap;
+  }
+
+  // ---- rendering -------------------------------------------------------
+  function metricCard(m) {
+    var card = el("div", "card");
+    card.appendChild(el("div", "label", LABELS[m.metric] || m.metric));
+
+    var val = el("div", "value");
+    val.appendChild(document.createTextNode(fmt(m.latest)));
+    if (m.unit) {
+      var u = el("span", "unit", m.unit);
+      val.appendChild(u);
+    }
+    card.appendChild(val);
+
+    var delta = el("div", "delta");
+    if (m.samples < 2) {
+      delta.textContent = "—";
+    } else {
+      var arrow = m.delta > 0 ? "▲" : (m.delta < 0 ? "▼" : "–");
+      var a = el("span", "arrow", arrow);
+      delta.appendChild(a);
+      var txt = " " + (m.delta > 0 ? "+" : "") + fmt(m.delta) + (m.unit ? " " + m.unit : "");
+      delta.appendChild(document.createTextNode(txt + " " + spanLabel(m.first_at, m.latest_at)));
+    }
+    card.appendChild(delta);
+
+    card.appendChild(sparkline(m.points, m.unit));
+    card.appendChild(el("div", "foot",
+      m.samples + (m.samples === 1 ? " sample" : " samples") + " · " + ago(m.latest_at)));
+    return card;
+  }
+
+  function renderCoverage(cov) {
+    var host = $("coverage");
+    host.textContent = "";
+    // Live categories first: the strip is the at-a-glance element, and
+    // alphabetical order buries the two that have data between three that
+    // do not.
+    var ordered = cov.slice().sort(function (a, b) {
+      if (a.live !== b.live) return a.live ? -1 : 1;
+      return a.category < b.category ? -1 : 1;
+    });
+    ordered.forEach(function (c) {
+      var box = el("div", "cov" + (c.live ? "" : " empty"));
+      var name = el("div", "name");
+      name.appendChild(document.createTextNode(c.category));
+      var chip;
+      if (c.live) {
+        chip = el("span", "chip live", "live");
+      } else if (c.category === "traffic") {
+        chip = el("span", "chip wait", "needs key");
+      } else {
+        chip = el("span", "chip none", "no source");
+      }
+      name.appendChild(chip);
+      box.appendChild(name);
+
+      var meta;
+      if (c.live) {
+        meta = c.metrics + " metrics · " + c.samples + " samples · " + ago(c.latest);
+      } else if (c.category === "traffic") {
+        meta = "free tier available, no key configured";
+      } else if (NO_SOURCE[c.category]) {
+        meta = "no free source exists";
+      } else {
+        meta = "no data in window";
+      }
+      box.appendChild(el("div", "meta", meta));
+      host.appendChild(box);
+    });
+  }
+
+  function renderContent(data, cov) {
+    var host = $("content");
+    host.textContent = "";
+
+    var byCategory = {};
+    data.metrics.forEach(function (m) {
+      (byCategory[m.category] = byCategory[m.category] || []).push(m);
+    });
+
+    var cats = Object.keys(byCategory).sort();
+    if (!cats.length) {
+      var msg = el("div", "msg",
+        "No observations for this location in the last " + state.hours +
+        " hours. The worker writes on its own schedule — weather every 10 minutes, air quality every 30.");
+      host.appendChild(msg);
+    }
+
+    cats.forEach(function (cat) {
+      var list = byCategory[cat].sort(function (a, b) {
+        var ia = ORDER.indexOf(a.metric), ib = ORDER.indexOf(b.metric);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+      var sec = el("section");
+      var head = el("div", "sec-head");
+      head.appendChild(el("h2", null, cat));
+      var src = list[0].source || "unknown source";
+      head.appendChild(el("span", "sec-note", list.length + " metrics · " + src));
+      sec.appendChild(head);
+
+      var cards = el("div", "cards");
+      list.forEach(function (m) { cards.appendChild(metricCard(m)); });
+      sec.appendChild(cards);
+      host.appendChild(sec);
+    });
+
+    // Categories with nothing in them get stated reasons, not blank space.
+    var empties = cov.filter(function (c) { return !c.live; });
+    if (empties.length) {
+      var sec2 = el("section");
+      var h = el("div", "sec-head");
+      h.appendChild(el("h2", null, "Not measured"));
+      h.appendChild(el("span", "sec-note", "empty on purpose — nothing is generated to fill these"));
+      sec2.appendChild(h);
+      var grid = el("div", "empties");
+      empties.forEach(function (c) {
+        var box = el("div", "empty-card");
+        box.appendChild(el("div", "label", c.category));
+        box.appendChild(el("p", null, NO_SOURCE[c.category] || "No observations in this window."));
+        grid.appendChild(box);
+      });
+      sec2.appendChild(grid);
+      host.appendChild(sec2);
+    }
+  }
+
+  function renderProvenance(data) {
+    var grids = {};
+    data.metrics.forEach(function (m) {
+      if (m.grid) grids[m.grid.lat + "," + m.grid.lng] = true;
+    });
+    var keys = Object.keys(grids);
+    var p = $("provenance");
+    if (!keys.length) { p.textContent = ""; return; }
+    p.textContent =
+      "Weather and air quality come from a model grid cell (" + keys.join("; ") +
+      "), not a sensor at this coordinate. Locations within the same cell return " +
+      "identical values — real measurements, but not independent per-location observations.";
+  }
+
+  function setStatus(kind, text) {
+    $("statusDot").className = "dot " + kind;
+    $("statusText").textContent = text;
+  }
+
+  async function load() {
+    try {
+      var hours = state.hours;
+      var [cov, data] = await Promise.all([
+        fetch("/api/coverage?hours=" + hours).then(function (r) { return r.json(); }),
+        fetch("/api/readings?location_id=" + state.locationId + "&hours=" + hours)
+          .then(function (r) {
+            if (!r.ok) throw new Error("readings " + r.status);
+            return r.json();
+          })
+      ]);
+
+      renderCoverage(cov);
+      renderProvenance(data);
+      renderContent(data, cov);
+
+      var live = cov.filter(function (c) { return c.live; }).length;
+      var newest = data.metrics.reduce(function (acc, m) {
+        return (!acc || m.latest_at > acc) ? m.latest_at : acc;
+      }, null);
+      if (newest) {
+        setStatus("ok", live + " of " + cov.length + " categories live · " + ago(newest));
+      } else {
+        setStatus("warn", "no observations in window");
+      }
+      $("generated").textContent = "Generated " + timeLabel(data.generated_at);
+    } catch (e) {
+      setStatus("bad", "error");
+      var host = $("content");
+      host.textContent = "";
+      host.appendChild(el("div", "msg err", "Could not load readings: " + e.message));
+    }
+  }
+
+  async function init() {
+    $("theme").addEventListener("click", function () {
+      var root = document.documentElement;
+      var dark = root.getAttribute("data-theme") === "dark";
+      if (!root.hasAttribute("data-theme")) {
+        dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      }
+      root.setAttribute("data-theme", dark ? "light" : "dark");
+    });
+
+    $("hours").addEventListener("change", function (e) {
+      state.hours = parseInt(e.target.value, 10);
+      load();
+    });
+    $("loc").addEventListener("change", function (e) {
+      state.locationId = parseInt(e.target.value, 10);
+      load();
+    });
+    $("refresh").addEventListener("click", load);
+
+    try {
+      state.locations = await fetch("/api/locations").then(function (r) { return r.json(); });
+    } catch (e) {
+      setStatus("bad", "API unreachable");
+      return;
+    }
+    if (!state.locations.length) {
+      setStatus("warn", "no active locations");
+      return;
+    }
+
+    var sel = $("loc");
+    state.locations.forEach(function (l) {
+      var o = document.createElement("option");
+      o.value = l.id;
+      o.textContent = l.name + (l.nearest_town ? " · " + l.nearest_town : "");
+      sel.appendChild(o);
+    });
+    state.locationId = state.locations[0].id;
+
+    await load();
+    // The worker writes every 10 minutes; refreshing far more often than that
+    // would mostly re-render identical numbers.
+    setInterval(load, 120000);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

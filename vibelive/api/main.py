@@ -8,10 +8,10 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 
 from vibelive import __version__, db
-from vibelive.api.routers import explorer, health
+from vibelive.api.routers import explorer, health, readings
 from vibelive.config import get_settings
 from vibelive.logging_setup import setup_logging
 
@@ -41,6 +41,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(readings.router)
 
 if settings.enable_explorer:
     app.include_router(explorer.router)
@@ -50,7 +51,7 @@ if settings.enable_explorer:
         return (STATIC / "explorer.html").read_text(encoding="utf-8")
 
 
-@app.get("/", include_in_schema=False)
-async def index():
-    """Replaced by the operator dashboard in phase 4."""
-    return RedirectResponse("/explorer" if settings.enable_explorer else "/docs")
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def index() -> str:
+    """The operator dashboard."""
+    return (STATIC / "dashboard.html").read_text(encoding="utf-8")
