@@ -1,0 +1,18 @@
+# Migrations are checksummed by sha256 over the file *text* (migrate.py:57), so
+# a line-ending conversion silently changes a migration's identity. A clone on a
+# machine with core.autocrlf=true would then fail every `migrate up` with a
+# checksum error against a database migrated from an LF checkout — the file was
+# never edited, only rewritten by git. Pin the whole tree to LF.
+* text=auto eol=lf
+
+# Belt and braces for the files whose bytes are load-bearing.
+*.sql   text eol=lf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.html  text eol=lf
+
+# Never touched by conversion.
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.ico   binary

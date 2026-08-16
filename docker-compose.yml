@@ -8,4 +8,52 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/data:/var/lib/postgresql/data
+      # Named volume, not a bind mount: `docker compose down -v` only clears
+      # named volumes, and Postgres has known fsync/permission quirks on a
+      # Windows bind mount. Use pg_dump for portability.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibelive -d vibelive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Runs to completion before api/worker start. Schema now lives in
+  # migrations/, not in docker-entrypoint-initdb.d.
+  migrate:
+    build:
+      context: .
+    command: python -m vibelive.migrate up
+    environment:
+      DATABASE_URL: postgresql://vibelive:secret@db:5432/vibelive
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: postgresql://vibelive:secret@db:5432/vibelive
+      LOG_LEVEL: INFO
+      ENABLE_EXPLORER: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request,sys;
+          sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health',
+          timeout=3).status == 200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  pgdata:
