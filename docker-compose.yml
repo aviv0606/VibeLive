@@ -55,5 +55,21 @@ services:
       retries: 3
       start_period: 10s
 
+  worker:
+    build:
+      context: .
+    command: python -m vibelive.workers
+    environment:
+      DATABASE_URL: postgresql://vibelive:secret@db:5432/vibelive
+      LOG_LEVEL: INFO
+      ENABLED_WORKERS: open_meteo_weather,open_meteo_pollution
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # SIGTERM sets the stop event and workers finish the cycle they are in.
+    # The default 10s would SIGKILL a poll mid-insert.
+    stop_grace_period: 30s
+    restart: unless-stopped
+
 volumes:
   pgdata:
